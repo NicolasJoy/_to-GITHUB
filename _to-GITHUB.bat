@@ -28,6 +28,7 @@ echo   12 Log             (последние коммиты)
 echo   13 Fetch           (обновить с сервера)
 echo   14 Справочник      (краткие подсказки)
 echo   15 Выборочный      (коммит нужных файлов, потом pull)
+echo   16 Откат           (к предыдущему коммиту)
 echo.
 set /p choice="  ^> "
 
@@ -47,6 +48,7 @@ if "%choice%"=="12" goto do_log
 if "%choice%"=="13" goto do_fetch
 if "%choice%"=="14" goto do_spravochnik
 if "%choice%"=="15" goto do_selective_commit
+if "%choice%"=="16" goto do_rollback
 echo Неверный выбор.
 timeout /t 2 >nul
 goto menu
@@ -166,6 +168,28 @@ git log --oneline -15
 echo.
 pause
 goto menu
+
+:do_rollback
+echo.
+echo Последние коммиты (верх = новее):
+git log --oneline -20
+echo.
+set /p rev="Хеш коммита (первые 6-7 символов): "
+if "!rev!"=="" (pause & goto menu)
+echo.
+echo 1  reset --hard  — ветку откатить к коммиту, всё после удалить (осторожно^!)
+echo 2  reset --soft  — откатить ветку, изменения останутся в индексе
+echo 3  revert        — создать коммит, отменяющий выбранный (историю не трогаем)
+echo.
+set /p roll="Выбор (1/2/3): "
+if "!roll!"=="1" (
+  set /p sure="Точно? Неотправленные коммиты пропадут. (y/n): "
+  if /i "!sure!"=="y" (git reset --hard "!rev!" & if !errorlevel! neq 0 (echo Ошибка. & pause) & goto menu)
+  goto menu
+)
+if "!roll!"=="2" (git reset --soft "!rev!" & if !errorlevel! neq 0 (echo Ошибка.) else (echo Готово.) & pause & goto menu)
+if "!roll!"=="3" (git revert "!rev!" --no-edit & if !errorlevel! neq 0 (echo Ошибка или конфликт.) else (echo Готово.) & pause & goto menu)
+echo Неверный выбор. & pause & goto menu
 
 :do_fetch
 echo.
