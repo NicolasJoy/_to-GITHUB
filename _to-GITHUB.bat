@@ -26,6 +26,7 @@ echo   10 Merge           (влить ветку в текущую)
 echo   11 Stash           (спрятать или вернуть изменения)
 echo   12 Log             (последние коммиты)
 echo   13 Fetch           (обновить с сервера)
+echo   14 Справочник      (краткие подсказки)
 echo.
 set /p choice="  ^> "
 
@@ -43,6 +44,7 @@ if "%choice%"=="10" goto do_merge
 if "%choice%"=="11" goto do_stash
 if "%choice%"=="12" goto do_log
 if "%choice%"=="13" goto do_fetch
+if "%choice%"=="14" goto do_spravochnik
 echo Неверный выбор.
 timeout /t 2 >nul
 goto menu
@@ -167,6 +169,50 @@ echo.
 git fetch
 if !errorlevel! neq 0 (echo Ошибка. & pause & goto menu)
 echo Готово. & pause & goto menu
+
+:do_spravochnik
+cls
+echo.
+echo === Справочник ===
+echo.
+echo   Commit
+echo     Сохранить изменения в истории. Делает "снимок" того, что
+echo     вы добавили в индекс (git add). Всегда с коротким сообщением.
+echo.
+echo   Push
+echo     Отправить ваши коммиты на удалённый сервер (GitHub и т.д.).
+echo     Без push другие не увидят ваши изменения.
+echo.
+echo   Pull
+echo     Скачать изменения с сервера и сразу влить в текущую ветку.
+echo     По сути: fetch + merge. Могут появиться конфликты — их надо решить.
+echo.
+echo   Fetch
+echo     Только скачать новые коммиты и ветки с сервера. Ваши файлы
+echo     и текущая ветка не меняются. Потом можно вручную сделать merge.
+echo.
+echo   Merge
+echo     Влить одну ветку в другую. Вы на ветке A — merge B вливает
+echo     все коммиты из B в A. Иногда бывают конфликты слияния.
+echo.
+echo   Stash
+echo     Временно спрятать незакоммиченные изменения (в "карман"),
+echo     чтобы переключиться на другую ветку. stash pop — вернуть обратно.
+echo.
+echo   Branch (ветка)
+echo     Отдельная линия истории. main — обычно основная. Ветки нужны,
+echo     чтобы разрабатывать фичи отдельно, потом влить через merge.
+echo.
+echo   Status
+echo     Показать: какие файлы изменены, что в индексе (готово к коммиту),
+echo     на какой ветке вы находитесь.
+echo.
+echo   Log
+echo     История коммитов в текущей ветке. Показывает кто, когда, какое
+echo     сообщение. --oneline — короткий вид (одна строка на коммит).
+echo.
+pause
+goto menu
 
 :exit
 echo До свидания.
