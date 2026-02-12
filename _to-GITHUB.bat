@@ -10,12 +10,22 @@ cls
 echo.
 echo === Git Helper ^| Ветка: %BRANCH% ===
 echo.
+echo   --- часто ---
 echo   1  Commit ^& push   (сохранить и отправить)
 echo   2  Pull            (скачать с сервера)
 echo   3  Status          (что изменено)
 echo   4  Push            (только отправить)
 echo   5  Pull → Commit   (подтянуть и отправить)
 echo   0  Выход
+echo   --- ветки и прочее ---
+echo   6  Новая ветка     (создать и переключиться)
+echo   7  Переключить     (другая ветка)
+echo   8  Удалить ветку   (локально / на сервере)
+echo   9  Список веток    (все ветки)
+echo   10 Merge           (влить ветку в текущую)
+echo   11 Stash           (спрятать или вернуть изменения)
+echo   12 Log             (последние коммиты)
+echo   13 Fetch           (обновить с сервера)
 echo.
 set /p choice="  ^> "
 
@@ -25,6 +35,14 @@ if "%choice%"=="3" goto do_status
 if "%choice%"=="4" goto do_push
 if "%choice%"=="5" goto do_pull_commit
 if "%choice%"=="0" goto exit
+if "%choice%"=="6" goto do_new_branch
+if "%choice%"=="7" goto do_switch
+if "%choice%"=="8" goto do_delete_branch
+if "%choice%"=="9" goto do_list_branches
+if "%choice%"=="10" goto do_merge
+if "%choice%"=="11" goto do_stash
+if "%choice%"=="12" goto do_log
+if "%choice%"=="13" goto do_fetch
 echo Неверный выбор.
 timeout /t 2 >nul
 goto menu
@@ -79,6 +97,76 @@ if !errorlevel! neq 0 (echo Ошибка отправки & pause & goto menu)
 echo Готово.
 pause
 goto menu
+
+:do_new_branch
+echo.
+set /p bname="Имя новой ветки: "
+if "!bname!"=="" (echo Пусто. & pause & goto menu)
+git switch -c "!bname!"
+if !errorlevel! neq 0 (echo Ошибка. & pause & goto menu)
+echo Ветка "!bname!" создана. & pause & goto menu
+
+:do_switch
+echo.
+git branch
+echo.
+set /p bname="Имя ветки: "
+if "!bname!"=="" (pause & goto menu)
+git switch "!bname!"
+if !errorlevel! neq 0 (echo Ошибка. & pause & goto menu)
+echo Переключено. & pause & goto menu
+
+:do_delete_branch
+echo.
+for /f "tokens=*" %%b in ('git branch --show-current 2^>nul') do set CURR=%%b
+git branch
+echo.
+set /p bname="Какую ветку удалить: "
+if "!bname!"=="" (pause & goto menu)
+if /i "!bname!"=="!CURR!" (echo Текущую ветку нельзя. Сначала переключитесь. & pause & goto menu)
+set /p where="Локально(L) / На сервере(R) / Оба(B): "
+if /i "!where!"=="L" (git branch -d "!bname!" & if !errorlevel! neq 0 (echo Не удалось. Попробуйте -D. & pause) & goto menu)
+if /i "!where!"=="R" (git push origin --delete "!bname!" & if !errorlevel! neq 0 (echo Ошибка. & pause) & goto menu)
+if /i "!where!"=="B" (git branch -d "!bname!" & git push origin --delete "!bname!" 2>nul & echo Готово. & pause & goto menu)
+echo Неверный ввод. & pause & goto menu
+
+:do_list_branches
+echo.
+git branch -a
+echo.
+pause
+goto menu
+
+:do_merge
+echo.
+git branch
+echo.
+set /p bname="Какую ветку влить: "
+if "!bname!"=="" (pause & goto menu)
+git merge "!bname!"
+if !errorlevel! neq 0 (echo Конфликты или ошибка. & pause & goto menu)
+echo Готово. & pause & goto menu
+
+:do_stash
+echo.
+echo 1 - спрятать (stash)  2 - вернуть (stash pop)
+set /p s="> "
+if "!s!"=="1" (git stash & echo Спрятано. & pause & goto menu)
+if "!s!"=="2" (git stash pop & if !errorlevel! neq 0 (echo Ошибка. & pause) & goto menu)
+echo Неверно. & pause & goto menu
+
+:do_log
+echo.
+git log --oneline -15
+echo.
+pause
+goto menu
+
+:do_fetch
+echo.
+git fetch
+if !errorlevel! neq 0 (echo Ошибка. & pause & goto menu)
+echo Готово. & pause & goto menu
 
 :exit
 echo До свидания.
