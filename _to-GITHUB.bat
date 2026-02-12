@@ -27,6 +27,7 @@ echo   11 Stash           (спрятать или вернуть изменен
 echo   12 Log             (последние коммиты)
 echo   13 Fetch           (обновить с сервера)
 echo   14 Справочник      (краткие подсказки)
+echo   15 Выборочный      (коммит нужных файлов, потом pull)
 echo.
 set /p choice="  ^> "
 
@@ -45,6 +46,7 @@ if "%choice%"=="11" goto do_stash
 if "%choice%"=="12" goto do_log
 if "%choice%"=="13" goto do_fetch
 if "%choice%"=="14" goto do_spravochnik
+if "%choice%"=="15" goto do_selective_commit
 echo Неверный выбор.
 timeout /t 2 >nul
 goto menu
@@ -110,9 +112,10 @@ echo Ветка "!bname!" создана. & pause & goto menu
 
 :do_switch
 echo.
-git branch
+echo Локальные и удалённые (remotes/origin/...):
+git branch -a
 echo.
-set /p bname="Имя ветки: "
+set /p bname="Имя ветки (без remotes/origin/): "
 if "!bname!"=="" (pause & goto menu)
 git switch "!bname!"
 if !errorlevel! neq 0 (echo Ошибка. & pause & goto menu)
@@ -169,6 +172,30 @@ echo.
 git fetch
 if !errorlevel! neq 0 (echo Ошибка. & pause & goto menu)
 echo Готово. & pause & goto menu
+
+:do_selective_commit
+echo.
+echo --- Изменённые и неотслеживаемые файлы ---
+git status -s
+echo.
+echo Введите имена файлов через пробел (или * чтобы добавить все^), затем Enter:
+set /p files="  Файлы: "
+if "!files!"=="" (echo Пусто. & pause & goto menu)
+set /p msg="Сообщение коммита: "
+if "!msg!"=="" (echo Пусто. & pause & goto menu)
+if "!files!"=="*" (git add .) else (git add !files!)
+if !errorlevel! neq 0 (echo Ошибка добавления. & pause & goto menu)
+git commit -m "!msg!"
+if !errorlevel! neq 0 (echo Ошибка коммита. & pause & goto menu)
+echo Коммит создан.
+set /p do_pull="Сделать pull сейчас? (y/n): "
+if /i "!do_pull!"=="y" (
+  git pull
+  if !errorlevel! neq 0 (echo Ошибка загрузки. & pause & goto menu)
+  echo Готово.
+)
+pause
+goto menu
 
 :do_spravochnik
 cls
