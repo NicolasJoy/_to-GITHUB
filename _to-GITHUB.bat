@@ -61,101 +61,98 @@ set "CURR_BRANCH="
 for /f "tokens=*" %%b in ('git branch --show-current 2^>nul') do set CURR_BRANCH=%%b
 if exist ".git-helper-simple" set /p WORK_BRANCH=<".git-helper-simple"
 if defined WORK_BRANCH (
-  if /i "!WORK_BRANCH!"=="!CURR_BRANCH!" set "SIMPLE_STATUS=1"
+  if /i "!WORK_BRANCH!"=="!CURR_BRANCH!" (set "SIMPLE_STATUS=1")
+  if "!SIMPLE_STATUS!"=="0" if /i "!CURR_BRANCH!"=="main" set "SIMPLE_STATUS=2"
 )
 
 cls
 echo.
-echo ================================
-echo       ПРОСТОЙ РЕЖИМ
-echo ================================
+echo ========== ПРОСТОЙ РЕЖИМ ==========
 echo.
 if "!SIMPLE_STATUS!"=="1" (
-  echo   Статус: В РАБОТЕ ^| ветка: !WORK_BRANCH!
+  echo   Статус: в работе ^| ветка !WORK_BRANCH!
+  echo.
+  echo   1  Завершить работу
+) else if "!SIMPLE_STATUS!"=="2" (
+  echo   Статус: работа завершена, ветка !WORK_BRANCH! сохранена
+  echo.
+  echo   1  Влить в главную
 ) else (
-  echo   Статус: НЕ В РАБОТЕ
+  echo   Статус: не в работе
+  echo.
+  echo   1  Начать работу
 )
 echo.
-if "!SIMPLE_STATUS!"=="1" (
-  echo   2  Завершить в ветке  (commit ^& push, затем main)
-  echo   3  Влить в main       (merge в main и push)
-) else (
-  echo   1  Начать работу      (создать ветку от main)
-)
-echo.
-echo   [Enter] - вернуться в главное меню
+echo   [Enter] — в главное меню
 echo.
 set /p simple_choice="  ^> "
 if "!simple_choice!"=="" goto menu
-if "!simple_choice!"=="1" goto simple_start
-if "!simple_choice!"=="2" goto simple_finish_branch
-if "!simple_choice!"=="3" goto simple_merge_main
-echo Неверный выбор.
-timeout /t 2 >nul
+if "!simple_choice!" neq "1" (echo Неверный выбор. & timeout /t 2 >nul & goto simple_mode)
+if "!SIMPLE_STATUS!"=="0" goto simple_start
+if "!SIMPLE_STATUS!"=="1" goto simple_finish
+if "!SIMPLE_STATUS!"=="2" goto simple_merge_main
 goto simple_mode
 
 :simple_start
-if "!SIMPLE_STATUS!"=="1" (echo Работа уже начата: !WORK_BRANCH! & pause & goto simple_mode)
 git rev-parse --verify main >nul 2>nul
 if !errorlevel! neq 0 (echo Ветка main не найдена. & pause & goto simple_mode)
 git switch main
 if !errorlevel! neq 0 (echo Не удалось переключиться на main. & pause & goto simple_mode)
 git pull
-if !errorlevel! neq 0 echo Внимание: pull не выполнен, продолжаем без обновления.
+if !errorlevel! neq 0 echo Внимание: pull не выполнен.
 for /f %%t in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmm"') do set "SIMPLE_TS=%%t"
 set "WORK_BRANCH=simple/!SIMPLE_TS!"
 git switch -c "!WORK_BRANCH!"
-if !errorlevel! neq 0 (echo Не удалось создать ветку !WORK_BRANCH!. & pause & goto simple_mode)
+if !errorlevel! neq 0 (echo Не удалось создать ветку. & pause & goto simple_mode)
 > ".git-helper-simple" echo !WORK_BRANCH!
-echo.
-echo Рабочая ветка создана: !WORK_BRANCH!
-echo Делайте изменения и снова зайдите в Простой режим для завершения.
+echo Ветка !WORK_BRANCH! создана. Работайте, потом снова зайдите сюда и нажмите Завершить работу.
 pause
 goto simple_mode
 
-:simple_finish_branch
-if "!SIMPLE_STATUS!" neq "1" (echo Сейчас нет активной простой сессии. & pause & goto simple_mode)
+:simple_finish
 set /p msg="Сообщение коммита (Enter = авто): "
 if "!msg!"=="" set "msg=Завершение работы в простом режиме"
 git add .
 if !errorlevel! neq 0 (echo Ошибка добавления файлов. & pause & goto simple_mode)
 git commit -m "!msg!"
-if !errorlevel! neq 0 (echo Ошибка коммита. Возможно, нет изменений. & pause & goto simple_mode)
+if !errorlevel! neq 0 (echo Ошибка коммита или нечего коммитить. & pause & goto simple_mode)
 git push -u origin "!WORK_BRANCH!"
-if !errorlevel! neq 0 (echo Ошибка отправки ветки на сервер. & pause & goto simple_mode)
-del ".git-helper-simple" >nul 2>nul
+if !errorlevel! neq 0 (echo Ошибка отправки. & pause & goto simple_mode)
+echo.
+echo Оставить текущую ветку или сразу влить в главную?
+set /p fin="  1 — оставить ветку  2 — влить в главную: "
+if "!fin!"=="2" goto simple_do_merge
 git switch main
-if !errorlevel! neq 0 (echo Коммит и push выполнены, но на main перейти не удалось. & pause & goto menu)
-echo Работа завершена в ветке !WORK_BRANCH!. Вы на main.
+if !errorlevel! neq 0 (echo Не удалось перейти на main. & pause & goto simple_mode)
+echo Готово. Вы на main, ветка !WORK_BRANCH! сохранена. Позже можно нажать «Влить в главную».
+pause
+goto simple_mode
+
+:simple_do_merge
+git switch main
+if !errorlevel! neq 0 (echo Ошибка перехода на main. & pause & goto simple_mode)
+git pull
+if !errorlevel! neq 0 (echo Ошибка pull. & pause & goto simple_mode)
+git merge "!WORK_BRANCH!"
+if !errorlevel! neq 0 (echo Конфликт или ошибка merge. & pause & goto simple_mode)
+git push origin main
+if !errorlevel! neq 0 (echo Ошибка push main. & pause & goto simple_mode)
+git branch -d "!WORK_BRANCH!" >nul 2>nul
+del ".git-helper-simple" >nul 2>nul
+echo Ветка влита в main, работа завершена.
 pause
 goto simple_mode
 
 :simple_merge_main
-if "!SIMPLE_STATUS!" neq "1" (echo Сейчас нет активной простой сессии. & pause & goto simple_mode)
-set /p do_commit="Перед merge сделать commit текущих изменений? (y/n): "
-if /i "!do_commit!"=="y" (
-  set /p msg="Сообщение коммита (Enter = авто): "
-  if "!msg!"=="" set "msg=Подготовка к слиянию из простого режима"
-  git add .
-  if !errorlevel! neq 0 (echo Ошибка добавления файлов. & pause & goto simple_mode)
-  git commit -m "!msg!"
-  if !errorlevel! neq 0 (echo Ошибка коммита. & pause & goto simple_mode)
-  git push -u origin "!WORK_BRANCH!"
-  if !errorlevel! neq 0 (echo Ошибка отправки рабочей ветки. & pause & goto simple_mode)
-)
-git switch main
-if !errorlevel! neq 0 (echo Не удалось перейти на main. & pause & goto simple_mode)
 git pull
-if !errorlevel! neq 0 (echo Не удалось обновить main через pull. & pause & goto simple_mode)
+if !errorlevel! neq 0 (echo Ошибка pull. & pause & goto simple_mode)
 git merge "!WORK_BRANCH!"
-if !errorlevel! neq 0 (echo Merge не выполнен: конфликт или ошибка. & pause & goto simple_mode)
+if !errorlevel! neq 0 (echo Конфликт или ошибка merge. & pause & goto simple_mode)
 git push origin main
-if !errorlevel! neq 0 (echo Merge выполнен, но push main не удался. & pause & goto simple_mode)
-set /p delete_remote="Удалить рабочую ветку на сервере тоже? (y/n): "
+if !errorlevel! neq 0 (echo Ошибка push main. & pause & goto simple_mode)
 git branch -d "!WORK_BRANCH!" >nul 2>nul
-if /i "!delete_remote!"=="y" git push origin --delete "!WORK_BRANCH!" >nul 2>nul
 del ".git-helper-simple" >nul 2>nul
-echo Ветка !WORK_BRANCH! влита в main и отправлена.
+echo Ветка влита в main.
 pause
 goto simple_mode
 
