@@ -23,16 +23,16 @@ echo   7  Переключить     (другая ветка)
 echo   8  Удалить ветку   (локально / на сервере)
 echo   9  Список веток    (все ветки)
 echo   10 Merge           (влить ветку в текущую)
-echo   11 Stash           (спрятать или вернуть изменения)
-echo   12 Log             (последние коммиты)
-echo   13 Fetch           (обновить с сервера)
-echo   14 Справочник      (краткие подсказки)
-echo   15 Выборочный      (коммит нужных файлов, потом pull)
-echo   16 Откат           (к предыдущему коммиту)
+echo   11 Простой режим   (начать/завершить работу)
+echo   12 Stash           (спрятать или вернуть изменения)
+echo   13 Log             (последние коммиты)
+echo   14 Fetch           (обновить с сервера)
+echo   15 Справочник      (краткие подсказки)
+echo   16 Выборочный      (коммит нужных файлов, потом pull)
+echo   17 Откат           (к предыдущему коммиту)
 echo.
 set /p choice="  ^> "
 
-if "%choice%"=="" goto simple_mode
 if "%choice%"=="1" goto do_commit_push
 if "%choice%"=="2" goto do_pull
 if "%choice%"=="3" goto do_status
@@ -44,12 +44,13 @@ if "%choice%"=="7" goto do_switch
 if "%choice%"=="8" goto do_delete_branch
 if "%choice%"=="9" goto do_list_branches
 if "%choice%"=="10" goto do_merge
-if "%choice%"=="11" goto do_stash
-if "%choice%"=="12" goto do_log
-if "%choice%"=="13" goto do_fetch
-if "%choice%"=="14" goto do_spravochnik
-if "%choice%"=="15" goto do_selective_commit
-if "%choice%"=="16" goto do_rollback
+if "%choice%"=="11" goto simple_mode
+if "%choice%"=="12" goto do_stash
+if "%choice%"=="13" goto do_log
+if "%choice%"=="14" goto do_fetch
+if "%choice%"=="15" goto do_spravochnik
+if "%choice%"=="16" goto do_selective_commit
+if "%choice%"=="17" goto do_rollback
 echo Неверный выбор.
 timeout /t 2 >nul
 goto menu
@@ -365,9 +366,9 @@ echo   Log
 echo     История коммитов в текущей ветке. Показывает кто, когда, какое
 echo     сообщение. --oneline — короткий вид (одна строка на коммит).
 echo.
-echo   Простой режим
-echo     В главном меню просто нажмите Enter. Скрипт сам создаст ветку
-echo     simple/... от main, а позже даст завершить в ветке или влить в main.
+echo   Простой режим (11)
+echo     В главном меню нажмите 11. Начать работу — создаётся ветка от main,
+echo     завершить — оставить ветку или сразу влить в главную.
 echo.
 pause
 goto menu
